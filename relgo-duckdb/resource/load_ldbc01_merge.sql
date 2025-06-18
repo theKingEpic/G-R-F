@@ -1,0 +1,67 @@
+COPY person            FROM '../../resource/graph/sf01_merge/dynamic/person_0_0.csv'                      (DELIMITER '|', HEADER);
+COPY place            FROM '../../resource/graph/sf01_merge/static/place_0_0.csv'                      (DELIMITER '|', HEADER);
+COPY tag            FROM '../../resource/graph/sf01_merge/static/tag_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY ispartof            FROM '../../resource/graph/sf01_merge/static/place_isPartOf_place_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY tagclass            FROM '../../resource/graph/sf01_merge/static/tagclass_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY forum             FROM '../../resource/graph/sf01_merge/dynamic/forum_0_0.csv'                       (DELIMITER '|', HEADER);
+
+COPY comment             FROM '../../resource/graph/sf01_merge/dynamic/comment_0_0.csv'                       (DELIMITER '|', HEADER);
+
+COPY post             FROM '../../resource/graph/sf01_merge/dynamic/post_0_0.csv'                       (DELIMITER '|', HEADER);
+
+COPY organisation             FROM '../../resource/graph/sf01_merge/static/organisation_0_0.csv'                       (DELIMITER '|', HEADER);
+
+
+COPY forum_person      FROM '../../resource/graph/sf01_merge/dynamic/forum_hasMember_person_0_0.csv'      (DELIMITER '|', HEADER);
+
+COPY forum_tag      FROM '../../resource/graph/sf01_merge/dynamic/forum_hasTag_tag_0_0.csv'      (DELIMITER '|', HEADER);
+
+COPY person_islocatedin            FROM '../../resource/graph/sf01_merge/dynamic/person_isLocatedIn_place_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY person_company            FROM '../../resource/graph/sf01_merge/dynamic/person_workAt_organisation_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY person_email            FROM '../../resource/graph/sf01_merge/dynamic/person_email_emailaddress_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY person_tag            FROM '../../resource/graph/sf01_merge/dynamic/person_hasInterest_tag_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY person_language            FROM '../../resource/graph/sf01_merge/dynamic/person_speaks_language_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY person_university            FROM '../../resource/graph/sf01_merge/dynamic/person_studyAt_organisation_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY likes_comment            FROM '../../resource/graph/sf01_merge/dynamic/person_likes_comment_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY likes_post            FROM '../../resource/graph/sf01_merge/dynamic/person_likes_post_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY comment_islocatedin            FROM '../../resource/graph/sf01_merge/dynamic/comment_isLocatedIn_place_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY comment_hascreator            FROM '../../resource/graph/sf01_merge/dynamic/comment_hasCreator_person_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY comment_replyof_post            FROM '../../resource/graph/sf01_merge/dynamic/comment_replyOf_post_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY comment_replyof_comment            FROM '../../resource/graph/sf01_merge/dynamic/comment_replyOf_comment_0_0.csv'                      (DELIMITER '|', HEADER);
+
+
+COPY comment_tag            FROM '../../resource/graph/sf01_merge/dynamic/comment_hasTag_tag_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY post_hascreator            FROM '../../resource/graph/sf01_merge/dynamic/post_hasCreator_person_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY post_tag            FROM '../../resource/graph/sf01_merge/dynamic/post_hasTag_tag_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY post_islocatedin            FROM '../../resource/graph/sf01_merge/dynamic/post_isLocatedIn_place_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY containerof_post            FROM '../../resource/graph/sf01_merge/dynamic/forum_containerOf_post_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY org_islocatedin            FROM '../../resource/graph/sf01_merge/static/organisation_isLocatedIn_place_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY tag_hastype            FROM '../../resource/graph/sf01_merge/static/tag_hasType_tagclass_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY issubclassof            FROM '../../resource/graph/sf01_merge/static/tagclass_isSubclassOf_tagclass_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY has_moderator            FROM '../../resource/graph/sf01_merge/static/forum_hasModerator_person_0_0.csv'                      (DELIMITER '|', HEADER);
+
+COPY knows (k_person1id, k_person2id, k_creationdate) FROM '../../resource/graph/sf01_merge/dynamic/person_knows_person_0_0.csv' (DELIMITER '|', HEADER);
+COPY knows (k_person2id, k_person1id, k_creationdate) FROM '../../resource/graph/sf01_merge/dynamic/person_knows_person_0_0.csv' (DELIMITER '|', HEADER);
+

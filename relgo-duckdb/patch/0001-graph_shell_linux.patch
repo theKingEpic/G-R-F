@@ -1,0 +1,490 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2b49e11288..a745305d6b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 2.8.12)
++cmake_minimum_required(VERSION 3.0)
+ 
+ if(POLICY CMP0026)
+   cmake_policy(SET CMP0026 NEW)
+@@ -28,6 +28,11 @@ else ()
+   set (CMAKE_CXX_STANDARD 11)
+ endif ()
+ 
++if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
++    add_compile_options(-Wno-missing-template-arg-list-after-template-kw)
++endif()
++
++set(DUCKDB_EXTENSION_CONFIGS "../extension_config.cmake" CACHE STRING "Path to the DuckDB extension configuration")
+ 
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_CXX_EXTENSIONS OFF)
+diff --git a/src/common/types.cpp b/src/common/types.cpp
+index d3c7a7ec0c..e6b8bc3544 100644
+--- a/src/common/types.cpp
++++ b/src/common/types.cpp
+@@ -158,48 +158,48 @@ string LogicalTypeIdToString(LogicalTypeId type) {
+ 	return EnumUtil::ToString(type);
+ }
+ 
+-constexpr const LogicalTypeId LogicalType::INVALID;
+-constexpr const LogicalTypeId LogicalType::SQLNULL;
+-constexpr const LogicalTypeId LogicalType::BOOLEAN;
+-constexpr const LogicalTypeId LogicalType::TINYINT;
+-constexpr const LogicalTypeId LogicalType::UTINYINT;
+-constexpr const LogicalTypeId LogicalType::SMALLINT;
+-constexpr const LogicalTypeId LogicalType::USMALLINT;
+-constexpr const LogicalTypeId LogicalType::INTEGER;
+-constexpr const LogicalTypeId LogicalType::UINTEGER;
+-constexpr const LogicalTypeId LogicalType::BIGINT;
+-constexpr const LogicalTypeId LogicalType::UBIGINT;
+-constexpr const LogicalTypeId LogicalType::HUGEINT;
+-constexpr const LogicalTypeId LogicalType::UUID;
+-constexpr const LogicalTypeId LogicalType::FLOAT;
+-constexpr const LogicalTypeId LogicalType::DOUBLE;
+-constexpr const LogicalTypeId LogicalType::DATE;
+-
+-constexpr const LogicalTypeId LogicalType::TIMESTAMP;
+-constexpr const LogicalTypeId LogicalType::TIMESTAMP_MS;
+-constexpr const LogicalTypeId LogicalType::TIMESTAMP_NS;
+-constexpr const LogicalTypeId LogicalType::TIMESTAMP_S;
+-
+-constexpr const LogicalTypeId LogicalType::TIME;
+-
+-constexpr const LogicalTypeId LogicalType::TIME_TZ;
+-constexpr const LogicalTypeId LogicalType::TIMESTAMP_TZ;
+-
+-constexpr const LogicalTypeId LogicalType::HASH;
+-constexpr const LogicalTypeId LogicalType::POINTER;
+-
+-constexpr const LogicalTypeId LogicalType::VARCHAR;
+-
+-constexpr const LogicalTypeId LogicalType::BLOB;
+-constexpr const LogicalTypeId LogicalType::BIT;
+-constexpr const LogicalTypeId LogicalType::INTERVAL;
+-constexpr const LogicalTypeId LogicalType::ROW_TYPE;
++// constexpr const LogicalTypeId LogicalType::INVALID;
++// constexpr const LogicalTypeId LogicalType::SQLNULL;
++// constexpr const LogicalTypeId LogicalType::BOOLEAN;
++// constexpr const LogicalTypeId LogicalType::TINYINT;
++// constexpr const LogicalTypeId LogicalType::UTINYINT;
++// constexpr const LogicalTypeId LogicalType::SMALLINT;
++// constexpr const LogicalTypeId LogicalType::USMALLINT;
++// constexpr const LogicalTypeId LogicalType::INTEGER;
++// constexpr const LogicalTypeId LogicalType::UINTEGER;
++// constexpr const LogicalTypeId LogicalType::BIGINT;
++// constexpr const LogicalTypeId LogicalType::UBIGINT;
++// constexpr const LogicalTypeId LogicalType::HUGEINT;
++// constexpr const LogicalTypeId LogicalType::UUID;
++// constexpr const LogicalTypeId LogicalType::FLOAT;
++// constexpr const LogicalTypeId LogicalType::DOUBLE;
++// constexpr const LogicalTypeId LogicalType::DATE;
++
++// constexpr const LogicalTypeId LogicalType::TIMESTAMP;
++// constexpr const LogicalTypeId LogicalType::TIMESTAMP_MS;
++// constexpr const LogicalTypeId LogicalType::TIMESTAMP_NS;
++// constexpr const LogicalTypeId LogicalType::TIMESTAMP_S;
++
++// constexpr const LogicalTypeId LogicalType::TIME;
++
++// constexpr const LogicalTypeId LogicalType::TIME_TZ;
++// constexpr const LogicalTypeId LogicalType::TIMESTAMP_TZ;
++
++// constexpr const LogicalTypeId LogicalType::HASH;
++// constexpr const LogicalTypeId LogicalType::POINTER;
++
++// constexpr const LogicalTypeId LogicalType::VARCHAR;
++
++// constexpr const LogicalTypeId LogicalType::BLOB;
++// constexpr const LogicalTypeId LogicalType::BIT;
++// constexpr const LogicalTypeId LogicalType::INTERVAL;
++// constexpr const LogicalTypeId LogicalType::ROW_TYPE;
+ 
+ // TODO these are incomplete and should maybe not exist as such
+-constexpr const LogicalTypeId LogicalType::TABLE;
+-constexpr const LogicalTypeId LogicalType::LAMBDA;
++// constexpr const LogicalTypeId LogicalType::TABLE;
++// constexpr const LogicalTypeId LogicalType::LAMBDA;
+ 
+-constexpr const LogicalTypeId LogicalType::ANY;
++// constexpr const LogicalTypeId LogicalType::ANY;
+ 
+ const vector<LogicalType> LogicalType::Numeric() {
+ 	vector<LogicalType> types = {LogicalType::TINYINT,   LogicalType::SMALLINT,  LogicalType::INTEGER,
+diff --git a/src/function/table/table_scan.cpp b/src/function/table/table_scan.cpp
+index 302b947289..eed88e6c42 100644
+--- a/src/function/table/table_scan.cpp
++++ b/src/function/table/table_scan.cpp
+@@ -299,7 +299,7 @@ void TableScanPushdownComplexFilter(ClientContext &context, LogicalGet &get, Fun
+ 	storage.info->indexes.Scan([&](Index &index) {
+ 		// first rewrite the index expression so the ColumnBindings align with the column bindings of the current table
+ 
+-		if (index.unbound_expressions.size() > 1) {
++		if (index.unbound_expressions.size() > 1 || index.unbound_expressions.size() == 0) {
+ 			// NOTE: index scans are not (yet) supported for compound index keys
+ 			return false;
+ 		}
+diff --git a/src/include/duckdb/common/enums/logical_operator_type.hpp b/src/include/duckdb/common/enums/logical_operator_type.hpp
+index 9215d3e40f..024f7b9568 100644
+--- a/src/include/duckdb/common/enums/logical_operator_type.hpp
++++ b/src/include/duckdb/common/enums/logical_operator_type.hpp
+@@ -84,6 +84,7 @@ enum class LogicalOperatorType : uint8_t {
+ 	LOGICAL_CREATE_TYPE = 135,
+ 	LOGICAL_ATTACH = 136,
+ 	LOGICAL_DETACH = 137,
++	LOGICAL_CREATE_RAI_INDEX = 138,
+ 
+ 	// -----------------------------
+ 	// Explain
+diff --git a/src/include/duckdb/common/types.hpp b/src/include/duckdb/common/types.hpp
+index 9fdc968678..281848395f 100644
+--- a/src/include/duckdb/common/types.hpp
++++ b/src/include/duckdb/common/types.hpp
+@@ -320,40 +320,40 @@ private:
+ 	PhysicalType GetInternalType();
+ 
+ public:
+-	static constexpr const LogicalTypeId SQLNULL = LogicalTypeId::SQLNULL;
+-	static constexpr const LogicalTypeId UNKNOWN = LogicalTypeId::UNKNOWN;
+-	static constexpr const LogicalTypeId BOOLEAN = LogicalTypeId::BOOLEAN;
+-	static constexpr const LogicalTypeId TINYINT = LogicalTypeId::TINYINT;
+-	static constexpr const LogicalTypeId UTINYINT = LogicalTypeId::UTINYINT;
+-	static constexpr const LogicalTypeId SMALLINT = LogicalTypeId::SMALLINT;
+-	static constexpr const LogicalTypeId USMALLINT = LogicalTypeId::USMALLINT;
+-	static constexpr const LogicalTypeId INTEGER = LogicalTypeId::INTEGER;
+-	static constexpr const LogicalTypeId UINTEGER = LogicalTypeId::UINTEGER;
+-	static constexpr const LogicalTypeId BIGINT = LogicalTypeId::BIGINT;
+-	static constexpr const LogicalTypeId UBIGINT = LogicalTypeId::UBIGINT;
+-	static constexpr const LogicalTypeId FLOAT = LogicalTypeId::FLOAT;
+-	static constexpr const LogicalTypeId DOUBLE = LogicalTypeId::DOUBLE;
+-	static constexpr const LogicalTypeId DATE = LogicalTypeId::DATE;
+-	static constexpr const LogicalTypeId TIMESTAMP = LogicalTypeId::TIMESTAMP;
+-	static constexpr const LogicalTypeId TIMESTAMP_S = LogicalTypeId::TIMESTAMP_SEC;
+-	static constexpr const LogicalTypeId TIMESTAMP_MS = LogicalTypeId::TIMESTAMP_MS;
+-	static constexpr const LogicalTypeId TIMESTAMP_NS = LogicalTypeId::TIMESTAMP_NS;
+-	static constexpr const LogicalTypeId TIME = LogicalTypeId::TIME;
+-	static constexpr const LogicalTypeId TIMESTAMP_TZ = LogicalTypeId::TIMESTAMP_TZ;
+-	static constexpr const LogicalTypeId TIME_TZ = LogicalTypeId::TIME_TZ;
+-	static constexpr const LogicalTypeId VARCHAR = LogicalTypeId::VARCHAR;
+-	static constexpr const LogicalTypeId ANY = LogicalTypeId::ANY;
+-	static constexpr const LogicalTypeId BLOB = LogicalTypeId::BLOB;
+-    static constexpr const LogicalTypeId BIT = LogicalTypeId::BIT;
+-    static constexpr const LogicalTypeId INTERVAL = LogicalTypeId::INTERVAL;
+-	static constexpr const LogicalTypeId HUGEINT = LogicalTypeId::HUGEINT;
+-	static constexpr const LogicalTypeId UUID = LogicalTypeId::UUID;
+-	static constexpr const LogicalTypeId HASH = LogicalTypeId::UBIGINT;
+-	static constexpr const LogicalTypeId POINTER = LogicalTypeId::POINTER;
+-	static constexpr const LogicalTypeId TABLE = LogicalTypeId::TABLE;
+-	static constexpr const LogicalTypeId LAMBDA = LogicalTypeId::LAMBDA;
+-	static constexpr const LogicalTypeId INVALID = LogicalTypeId::INVALID;
+-	static constexpr const LogicalTypeId ROW_TYPE = LogicalTypeId::BIGINT;
++	inline static constexpr const LogicalTypeId SQLNULL = LogicalTypeId::SQLNULL;
++	inline static constexpr const LogicalTypeId UNKNOWN = LogicalTypeId::UNKNOWN;
++	inline static constexpr const LogicalTypeId BOOLEAN = LogicalTypeId::BOOLEAN;
++	inline static constexpr const LogicalTypeId TINYINT = LogicalTypeId::TINYINT;
++	inline static constexpr const LogicalTypeId UTINYINT = LogicalTypeId::UTINYINT;
++	inline static constexpr const LogicalTypeId SMALLINT = LogicalTypeId::SMALLINT;
++	inline static constexpr const LogicalTypeId USMALLINT = LogicalTypeId::USMALLINT;
++	inline static constexpr const LogicalTypeId INTEGER = LogicalTypeId::INTEGER;
++	inline static constexpr const LogicalTypeId UINTEGER = LogicalTypeId::UINTEGER;
++	inline static constexpr const LogicalTypeId BIGINT = LogicalTypeId::BIGINT;
++	inline static constexpr const LogicalTypeId UBIGINT = LogicalTypeId::UBIGINT;
++	inline static constexpr const LogicalTypeId FLOAT = LogicalTypeId::FLOAT;
++	inline static constexpr const LogicalTypeId DOUBLE = LogicalTypeId::DOUBLE;
++	inline static constexpr const LogicalTypeId DATE = LogicalTypeId::DATE;
++	inline static constexpr const LogicalTypeId TIMESTAMP = LogicalTypeId::TIMESTAMP;
++	inline static constexpr const LogicalTypeId TIMESTAMP_S = LogicalTypeId::TIMESTAMP_SEC;
++	inline static constexpr const LogicalTypeId TIMESTAMP_MS = LogicalTypeId::TIMESTAMP_MS;
++	inline static constexpr const LogicalTypeId TIMESTAMP_NS = LogicalTypeId::TIMESTAMP_NS;
++	inline static constexpr const LogicalTypeId TIME = LogicalTypeId::TIME;
++	inline static constexpr const LogicalTypeId TIMESTAMP_TZ = LogicalTypeId::TIMESTAMP_TZ;
++	inline static constexpr const LogicalTypeId TIME_TZ = LogicalTypeId::TIME_TZ;
++	inline static constexpr const LogicalTypeId VARCHAR = LogicalTypeId::VARCHAR;
++	inline static constexpr const LogicalTypeId ANY = LogicalTypeId::ANY;
++	inline static constexpr const LogicalTypeId BLOB = LogicalTypeId::BLOB;
++    inline static constexpr const LogicalTypeId BIT = LogicalTypeId::BIT;
++    inline static constexpr const LogicalTypeId INTERVAL = LogicalTypeId::INTERVAL;
++	inline static constexpr const LogicalTypeId HUGEINT = LogicalTypeId::HUGEINT;
++	inline static constexpr const LogicalTypeId UUID = LogicalTypeId::UUID;
++	inline static constexpr const LogicalTypeId HASH = LogicalTypeId::UBIGINT;
++	inline static constexpr const LogicalTypeId POINTER = LogicalTypeId::POINTER;
++	inline static constexpr const LogicalTypeId TABLE = LogicalTypeId::TABLE;
++	inline static constexpr const LogicalTypeId LAMBDA = LogicalTypeId::LAMBDA;
++	inline static constexpr const LogicalTypeId INVALID = LogicalTypeId::INVALID;
++	inline static constexpr const LogicalTypeId ROW_TYPE = LogicalTypeId::BIGINT;
+ 
+ 	// explicitly allowing these functions to be capitalized to be in-line with the remaining functions
+ 	DUCKDB_API static LogicalType DECIMAL(int width, int scale);                 // NOLINT
+diff --git a/src/include/duckdb/main/capi/capi_internal.hpp b/src/include/duckdb/main/capi/capi_internal.hpp
+index cd4ae62629..9723bfe240 100644
+--- a/src/include/duckdb/main/capi/capi_internal.hpp
++++ b/src/include/duckdb/main/capi/capi_internal.hpp
+@@ -8,6 +8,7 @@
+ 
+ #pragma once
+ 
++#include "../../../relgo/relgo_statement/relgo_prepared_statement.hpp"
+ #include "duckdb.h"
+ #include "duckdb.hpp"
+ #include "duckdb/common/types.hpp"
+@@ -33,7 +34,7 @@ struct DatabaseData {
+ struct PreparedStatementWrapper {
+ 	//! Map of name -> values
+ 	case_insensitive_map_t<Value> values;
+-	unique_ptr<PreparedStatement> statement;
++	unique_ptr<RelGoPreparedStatement> statement;
+ };
+ 
+ struct ExtractStatementsWrapper {
+diff --git a/src/include/duckdb/main/client_context.hpp b/src/include/duckdb/main/client_context.hpp
+index 16ead95d02..94a6728cb9 100644
+--- a/src/include/duckdb/main/client_context.hpp
++++ b/src/include/duckdb/main/client_context.hpp
+@@ -193,7 +193,7 @@ public:
+ 	//! Returns true if execution of the current query is finished
+ 	DUCKDB_API bool ExecutionIsFinished();
+ 
+-private:
++protected:
+ 	//! Parse statements and resolve pragmas from a query
+ 	bool ParseStatements(ClientContextLock &lock, const string &query, vector<unique_ptr<SQLStatement>> &result,
+ 	                     PreservedError &error);
+diff --git a/src/include/duckdb/main/connection.hpp b/src/include/duckdb/main/connection.hpp
+index 5df85444b1..4adebd54ed 100644
+--- a/src/include/duckdb/main/connection.hpp
++++ b/src/include/duckdb/main/connection.hpp
+@@ -8,6 +8,7 @@
+ 
+ #pragma once
+ 
++#include "../../../relgo/relgo_statement/relgo_client_context.hpp"
+ #include "duckdb/common/enums/profiler_format.hpp"
+ #include "duckdb/common/serializer/buffered_file_writer.hpp"
+ #include "duckdb/common/winapi.hpp"
+@@ -25,6 +26,7 @@ namespace duckdb {
+ 
+ class ColumnDataCollection;
+ class ClientContext;
++class RelGoPreparedStatement;
+ 
+ class DatabaseInstance;
+ class DuckDB;
+@@ -42,7 +44,7 @@ public:
+ 	DUCKDB_API explicit Connection(DatabaseInstance &database);
+ 	DUCKDB_API ~Connection();
+ 
+-	shared_ptr<ClientContext> context;
++	shared_ptr<RelGoClientContext> context;
+ 	warning_callback warning_cb;
+ 
+ public:
+@@ -91,9 +93,9 @@ public:
+ 	                                                       bool allow_stream_result = false);
+ 
+ 	//! Prepare the specified query, returning a prepared statement object
+-	DUCKDB_API unique_ptr<PreparedStatement> Prepare(const string &query);
++	DUCKDB_API unique_ptr<RelGoPreparedStatement> Prepare(const string &query);
+ 	//! Prepare the specified statement, returning a prepared statement object
+-	DUCKDB_API unique_ptr<PreparedStatement> Prepare(unique_ptr<SQLStatement> statement);
++	DUCKDB_API unique_ptr<RelGoPreparedStatement> Prepare(unique_ptr<SQLStatement> statement);
+ 
+ 	//! Get the table info of a specific table (in the default schema), or nullptr if it cannot be found
+ 	DUCKDB_API unique_ptr<TableDescription> TableInfo(const string &table_name);
+diff --git a/src/include/duckdb/storage/table/row_group.hpp b/src/include/duckdb/storage/table/row_group.hpp
+index 5b416ba117..6652a29add 100644
+--- a/src/include/duckdb/storage/table/row_group.hpp
++++ b/src/include/duckdb/storage/table/row_group.hpp
+@@ -57,7 +57,7 @@ public:
+ 	RowGroup(RowGroupCollection &collection, RowGroupPointer &&pointer);
+ 	~RowGroup();
+ 
+-private:
++public:
+ 	//! The RowGroupCollection this row-group is a part of
+ 	reference<RowGroupCollection> collection;
+ 	//! The version info of the row_group (inserted and deleted tuple info)
+@@ -163,7 +163,7 @@ private:
+ 
+ 	bool HasUnloadedDeletes() const;
+ 
+-private:
++public:
+ 	mutex row_group_lock;
+ 	mutex stats_lock;
+ 	vector<MetaBlockPointer> column_pointers;
+diff --git a/src/main/capi/prepared-c.cpp b/src/main/capi/prepared-c.cpp
+index 8a7a6c5f30..34a2d5a524 100644
+--- a/src/main/capi/prepared-c.cpp
++++ b/src/main/capi/prepared-c.cpp
+@@ -1,3 +1,4 @@
++#include "../../../relgo/relgo_statement/relgo_prepared_statement.hpp"
+ #include "duckdb/main/capi/capi_internal.hpp"
+ #include "duckdb/main/query_result.hpp"
+ #include "duckdb/main/prepared_statement_data.hpp"
+diff --git a/src/main/connection.cpp b/src/main/connection.cpp
+index 12a222639a..d383ef69c8 100644
+--- a/src/main/connection.cpp
++++ b/src/main/connection.cpp
+@@ -1,5 +1,7 @@
+ #include "duckdb/main/connection.hpp"
+ 
++#include "../../../relgo//relgo_statement/relgo_client_context.hpp"
++#include "../../../relgo//relgo_statement/relgo_prepared_statement.hpp"
+ #include "duckdb/common/types/column/column_data_collection.hpp"
+ #include "duckdb/execution/operator/scan/csv/parallel_csv_reader.hpp"
+ #include "duckdb/function/table/read_csv.hpp"
+@@ -19,7 +21,8 @@
+ 
+ namespace duckdb {
+ 
+-Connection::Connection(DatabaseInstance &database) : context(make_shared<ClientContext>(database.shared_from_this())) {
++Connection::Connection(DatabaseInstance &database)
++    : context(make_shared<RelGoClientContext>(database.shared_from_this())) {
+ 	ConnectionManager::Get(database).AddConnection(*context);
+ #ifdef DEBUG
+ 	EnableProfiling();
+@@ -119,11 +122,11 @@ unique_ptr<PendingQueryResult> Connection::PendingQuery(unique_ptr<SQLStatement>
+ 	return context->PendingQuery(std::move(statement), allow_stream_result);
+ }
+ 
+-unique_ptr<PreparedStatement> Connection::Prepare(const string &query) {
++unique_ptr<RelGoPreparedStatement> Connection::Prepare(const string &query) {
+ 	return context->Prepare(query);
+ }
+ 
+-unique_ptr<PreparedStatement> Connection::Prepare(unique_ptr<SQLStatement> statement) {
++unique_ptr<RelGoPreparedStatement> Connection::Prepare(unique_ptr<SQLStatement> statement) {
+ 	return context->Prepare(std::move(statement));
+ }
+ 
+diff --git a/test/api/test_api.cpp b/test/api/test_api.cpp
+index e07d04d6c4..0976b1e625 100644
+--- a/test/api/test_api.cpp
++++ b/test/api/test_api.cpp
+@@ -1,3 +1,4 @@
++#include "../../../relgo/relgo_statement/relgo_prepared_statement.hpp"
+ #include "catch.hpp"
+ #include "test_helpers.hpp"
+ #include "duckdb/parser/parser.hpp"
+diff --git a/tools/shell/shell.c b/tools/shell/shell.c
+index 8c7101562e..94324d2d9c 100644
+--- a/tools/shell/shell.c
++++ b/tools/shell/shell.c
+@@ -11596,7 +11596,7 @@ static int shell_callback(
+ ){
+   int i;
+   ShellState *p = (ShellState*)pArg;
+-
++ 
+   if( azArg==0 ) return 0;
+   switch( p->cMode ){
+     case MODE_Line: {
+@@ -12887,6 +12887,18 @@ columnar_end:
+ 
+ extern char *sqlite3_print_duckbox(sqlite3_stmt *pStmt, size_t max_rows, size_t max_width, char *null_value, int columns);
+ 
++static int check_explain_in_call(const char *str) {
++  const char *prefix = "call explain";
++  while (*prefix) {
++      if (tolower(*str) != tolower(*prefix)) {
++          return 0;  // Not matching
++      }
++      str++;
++      prefix++;
++  }
++  return 1;  // Match found
++}
++
+ /*
+ ** Run a prepared statement
+ */
+@@ -12895,22 +12907,26 @@ static void exec_prepared_stmt(
+   sqlite3_stmt *pStmt                              /* Statment to run */
+ ){
+   int rc;
+-  if (pArg->cMode == MODE_DuckBox) {
+-	  size_t max_rows = pArg->outfile[0] == '\0' || pArg->outfile[0] == '|' ? pArg->max_rows : (size_t) -1;
+-	  size_t max_width = pArg->outfile[0] == '\0' || pArg->outfile[0] == '|' ? pArg->max_width : (size_t) -1;
+-	  char *str = sqlite3_print_duckbox(pStmt, max_rows, max_width, pArg->nullValue, pArg->columns);
+-	  if (str) {
+-		  utf8_printf(pArg->out, "%s", str);
+-		  sqlite3_free(str);
+-	  }
+-	  return;
++  char* query = sqlite3_sql(pStmt);
++  int is_explain_in_call = check_explain_in_call(query);
++  if (!is_explain_in_call) {
++    if (pArg->cMode == MODE_DuckBox) {
++      size_t max_rows = pArg->outfile[0] == '\0' || pArg->outfile[0] == '|' ? pArg->max_rows : (size_t) -1;
++      size_t max_width = pArg->outfile[0] == '\0' || pArg->outfile[0] == '|' ? pArg->max_width : (size_t) -1;
++      char *str = sqlite3_print_duckbox(pStmt, max_rows, max_width, pArg->nullValue, pArg->columns);
++      if (str) {
++        utf8_printf(pArg->out, "%s", str);
++        sqlite3_free(str);
++      }
++      return;
++    }
+   }
+ 
+   if( pArg->cMode==MODE_Column
+-   || pArg->cMode==MODE_Table
+-   || pArg->cMode==MODE_Box
+-   || pArg->cMode==MODE_Markdown
+-   || pArg->cMode==MODE_Latex
++  || pArg->cMode==MODE_Table
++  || pArg->cMode==MODE_Box
++  || pArg->cMode==MODE_Markdown
++  || pArg->cMode==MODE_Latex
+   ){
+     exec_prepared_stmt_columnar(pArg, pStmt);
+     return;
+@@ -12956,11 +12972,22 @@ static void exec_prepared_stmt(
+ 
+         /* if data and types extracted successfully... */
+         if( SQLITE_ROW == rc ){
+-          /* call the supplied callback with the result row data */
+-          if( pArg->cMode!=MODE_Trash && shell_callback(pArg, nCol, azVals, azCols, aiTypes) ){
+-            rc = SQLITE_ABORT;
+-          }else{
+-            rc = sqlite3_step(pStmt);
++          if (is_explain_in_call) {
++            int original_mode = pArg->cMode;
++            pArg->cMode = MODE_Explain;
++            if( pArg->cMode!=MODE_Trash && shell_callback(pArg, nCol, azVals, azCols, aiTypes) ){
++              rc = SQLITE_ABORT;
++            }else{
++              rc = sqlite3_step(pStmt);
++            }
++            pArg->cMode = original_mode;
++          } else {
++            /* call the supplied callback with the result row data */
++            if( pArg->cMode!=MODE_Trash && shell_callback(pArg, nCol, azVals, azCols, aiTypes) ){
++              rc = SQLITE_ABORT;
++            }else{
++              rc = sqlite3_step(pStmt);
++            }
+           }
+         }
+       } while( SQLITE_ROW == rc );
+diff --git a/tools/sqlite3_api_wrapper/sqlite3_api_wrapper.cpp b/tools/sqlite3_api_wrapper/sqlite3_api_wrapper.cpp
+index 999913485b..1cd6fa0329 100644
+--- a/tools/sqlite3_api_wrapper/sqlite3_api_wrapper.cpp
++++ b/tools/sqlite3_api_wrapper/sqlite3_api_wrapper.cpp
+@@ -1,6 +1,7 @@
+ #ifdef USE_DUCKDB_SHELL_WRAPPER
+ #include "duckdb_shell_wrapper.h"
+ #endif
++#include "../../../relgo/relgo_statement/relgo_prepared_statement.hpp"
+ #include "sqlite3.h"
+ #include "udf_struct_sqlite3.h"
+ #include "sqlite3_udf_wrapper.hpp"
+@@ -52,7 +53,7 @@ struct sqlite3_stmt {
+ 	//! The query string
+ 	string query_string;
+ 	//! The prepared statement object, if successfully prepared
+-	duckdb::unique_ptr<PreparedStatement> prepared;
++	duckdb::unique_ptr<RelGoPreparedStatement> prepared;
+ 	//! The result object, if successfully executed
+ 	duckdb::unique_ptr<QueryResult> result;
+ 	//! The current chunk that we are iterating over

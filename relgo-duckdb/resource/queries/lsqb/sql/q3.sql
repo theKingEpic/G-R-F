@@ -1,0 +1,34 @@
+SELECT COUNT(*)
+FROM place AS CityA
+JOIN ispartof AS IPA_A
+  ON IPA_A.ipo_place1id = CityA.pl_placeid
+JOIN ispartof AS IPA_B
+  ON IPA_B.ipo_place2id = IPA_A.ipo_place2id
+JOIN place AS CityB
+  ON IPA_B.ipo_place1id = CityB.pl_placeid
+JOIN ispartof AS IPA_C
+  ON IPA_C.ipo_place2id = IPA_A.ipo_place2id
+JOIN place AS CityC
+  ON IPA_C.ipo_place1id = CityC.pl_placeid
+JOIN person_islocatedin AS piA
+  ON piA.pi_placeid = CityA.pl_placeid
+JOIN person AS PersonA
+  ON PersonA.p_personid = piA.pi_personid
+JOIN person_islocatedin AS piB
+  ON piB.pi_placeid = CityB.pl_placeid
+JOIN person AS PersonB
+  ON PersonB.p_personid = piB.pi_personid
+JOIN person_islocatedin AS piC
+  ON piC.pi_placeid = CityC.pl_placeid
+JOIN person AS PersonC
+  ON PersonC.p_personid = piC.pi_personid
+JOIN knows AS pkp1
+  ON pkp1.k_person1id = PersonA.p_personid
+ AND pkp1.k_person2id = PersonB.p_personid
+JOIN knows AS pkp2
+  ON pkp2.k_person1id = PersonB.p_personid
+ AND pkp2.k_person2id = PersonC.p_personid
+JOIN knows AS pkp3
+  ON pkp3.k_person1id = PersonC.p_personid
+ AND pkp3.k_person2id = PersonA.p_personid;
+

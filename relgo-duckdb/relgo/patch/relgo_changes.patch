@@ -1,0 +1,135 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2b49e11288..4e69271d6d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,6 +20,23 @@ project(DuckDB)
+ 
+ find_package(Threads REQUIRED)
+ 
++add_compile_options(-fsanitize=address)
++add_link_options(-fsanitize=address)
++
++find_package(Protobuf REQUIRED)
++include_directories(${Protobuf_INCLUDE_DIR})
++
++set(JAVA_AWT_INCLUDE_PATH NotNeeded)
++find_package(JNI QUIET)
++if (JNI_FOUND)
++    include_directories(SYSTEM ${JAVA_INCLUDE_PATH})
++    include_directories(SYSTEM ${JAVA_INCLUDE_PATH2})
++else()
++    message(FATAL_ERROR "JNI not found")
++endif()
++
++add_subdirectory(examples/embedded-c++)
++
+ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+ 
+ if (CMAKE_VERSION VERSION_LESS "3.1")
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index cda2d86cf8..0f0904b0c7 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -75,7 +75,8 @@ else()
+       duckdb_utf8proc
+       duckdb_hyperloglog
+       duckdb_fastpforlib
+-      duckdb_mbedtls)
++      duckdb_mbedtls
++      duckdb_planir)
+ 
+   add_library(duckdb SHARED ${ALL_OBJECT_FILES})
+   target_link_libraries(duckdb ${DUCKDB_LINK_LIBS})
+diff --git a/src/include/duckdb/common/enums/logical_operator_type.hpp b/src/include/duckdb/common/enums/logical_operator_type.hpp
+index 9215d3e40f..024f7b9568 100644
+--- a/src/include/duckdb/common/enums/logical_operator_type.hpp
++++ b/src/include/duckdb/common/enums/logical_operator_type.hpp
+@@ -84,6 +84,7 @@ enum class LogicalOperatorType : uint8_t {
+ 	LOGICAL_CREATE_TYPE = 135,
+ 	LOGICAL_ATTACH = 136,
+ 	LOGICAL_DETACH = 137,
++	LOGICAL_CREATE_RAI_INDEX = 138,
+ 
+ 	// -----------------------------
+ 	// Explain
+diff --git a/src/include/duckdb/main/client_context.hpp b/src/include/duckdb/main/client_context.hpp
+index 16ead95d02..94a6728cb9 100644
+--- a/src/include/duckdb/main/client_context.hpp
++++ b/src/include/duckdb/main/client_context.hpp
+@@ -193,7 +193,7 @@ public:
+ 	//! Returns true if execution of the current query is finished
+ 	DUCKDB_API bool ExecutionIsFinished();
+ 
+-private:
++protected:
+ 	//! Parse statements and resolve pragmas from a query
+ 	bool ParseStatements(ClientContextLock &lock, const string &query, vector<unique_ptr<SQLStatement>> &result,
+ 	                     PreservedError &error);
+diff --git a/src/include/duckdb/main/connection.hpp b/src/include/duckdb/main/connection.hpp
+index 5df85444b1..761047c367 100644
+--- a/src/include/duckdb/main/connection.hpp
++++ b/src/include/duckdb/main/connection.hpp
+@@ -20,6 +20,7 @@
+ #include "duckdb/main/stream_query_result.hpp"
+ #include "duckdb/main/table_description.hpp"
+ #include "duckdb/parser/sql_statement.hpp"
++#include "../../third_party/planir/planir_statement/planir_client_context.hpp"
+ 
+ namespace duckdb {
+ 
+@@ -42,7 +43,7 @@ public:
+ 	DUCKDB_API explicit Connection(DatabaseInstance &database);
+ 	DUCKDB_API ~Connection();
+ 
+-	shared_ptr<ClientContext> context;
++	shared_ptr<PlanIRClientContext> context;
+ 	warning_callback warning_cb;
+ 
+ public:
+diff --git a/src/include/duckdb/storage/table/row_group.hpp b/src/include/duckdb/storage/table/row_group.hpp
+index 5b416ba117..6652a29add 100644
+--- a/src/include/duckdb/storage/table/row_group.hpp
++++ b/src/include/duckdb/storage/table/row_group.hpp
+@@ -57,7 +57,7 @@ public:
+ 	RowGroup(RowGroupCollection &collection, RowGroupPointer &&pointer);
+ 	~RowGroup();
+ 
+-private:
++public:
+ 	//! The RowGroupCollection this row-group is a part of
+ 	reference<RowGroupCollection> collection;
+ 	//! The version info of the row_group (inserted and deleted tuple info)
+@@ -163,7 +163,7 @@ private:
+ 
+ 	bool HasUnloadedDeletes() const;
+ 
+-private:
++public:
+ 	mutex row_group_lock;
+ 	mutex stats_lock;
+ 	vector<MetaBlockPointer> column_pointers;
+diff --git a/src/main/connection.cpp b/src/main/connection.cpp
+index 12a222639a..908a145460 100644
+--- a/src/main/connection.cpp
++++ b/src/main/connection.cpp
+@@ -19,7 +19,7 @@
+ 
+ namespace duckdb {
+ 
+-Connection::Connection(DatabaseInstance &database) : context(make_shared<ClientContext>(database.shared_from_this())) {
++Connection::Connection(DatabaseInstance &database) : context(make_shared<PlanIRClientContext>(database.shared_from_this())) {
+ 	ConnectionManager::Get(database).AddConnection(*context);
+ #ifdef DEBUG
+ 	EnableProfiling();
+diff --git a/third_party/CMakeLists.txt b/third_party/CMakeLists.txt
+index bf655fecd8..e57d57dca2 100644
+--- a/third_party/CMakeLists.txt
++++ b/third_party/CMakeLists.txt
+@@ -11,6 +11,7 @@ if(NOT AMALGAMATION_BUILD)
+   add_subdirectory(fastpforlib)
+   add_subdirectory(mbedtls)
+   add_subdirectory(fsst)
++  add_subdirectory(planir)
+ endif()
+ 
+ if(NOT WIN32
