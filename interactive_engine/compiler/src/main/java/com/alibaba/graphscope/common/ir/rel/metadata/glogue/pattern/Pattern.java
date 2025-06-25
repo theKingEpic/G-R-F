@@ -120,7 +120,7 @@ public class Pattern {
 
     /**
      * Get all possible extend steps of current pattern based on the given GlogueSchema
-     * @param glogue schema
+     * @param schema schema
      * @return a list of extend steps
      */
     public List<ExtendStep> getExtendSteps(GlogueSchema schema) {

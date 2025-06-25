@@ -1,3 +1,6 @@
+/**
+ * GraphFieldTrimmer 是一个专门用于图查询优化的字段修剪器，继承自 Apache Calcite 的 RelFieldTrimmer。 该类的主要功能是通过分析查询计划中实际使用的字段，移除不必要的字段以优化查询性能。
+ */
 package com.alibaba.graphscope.common.ir.planner;
 
 import static com.alibaba.graphscope.common.ir.tools.Utils.getOutputType;
@@ -64,6 +67,7 @@ public class GraphFieldTrimmer extends RelFieldTrimmer {
     }
 
     /**
+     * 处理投影操作的字段修剪
      * @param project which to be trimmed
      * @param fieldsUsed fields used by parent
      * @return  a pair of new project relNode and mapping
@@ -187,6 +191,12 @@ public class GraphFieldTrimmer extends RelFieldTrimmer {
         return result(newProject, mapping, project);
     }
 
+    /**
+     * 处理排序操作的字段修剪
+     * @param aggregate
+     * @param fieldsUsed
+     * @return
+     */
     public TrimResult trimFields(GraphLogicalAggregate aggregate, UsedFields fieldsUsed) {
 
         List<GraphAggCall> aggCalls = new ArrayList<>();

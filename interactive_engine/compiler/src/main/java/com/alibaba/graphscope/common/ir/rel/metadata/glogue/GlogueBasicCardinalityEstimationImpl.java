@@ -159,11 +159,14 @@ public class GlogueBasicCardinalityEstimationImpl implements GlogueCardinalityEs
     public Double getCardinality(Pattern queryPattern) {
         return getCardinality(queryPattern, false);
     }
-
+    private static final Logger cardinalityLogger = LoggerFactory.getLogger("CardinalityEstimation");
     public @Nullable Double getCardinality(Pattern queryPattern, boolean allowsNull) {
         for (Pattern pattern : this.patternCardinality.keySet()) {
             if (pattern.equals(queryPattern)) {
-                return this.patternCardinality.get(pattern);
+                Double result = this.patternCardinality.get(pattern);
+                // 添加日志打印
+                // cardinalityLogger.info("基数估计 - Pattern: {}, 估计值: {}", queryPattern, result);
+                return result;
             }
         }
         if (allowsNull) {

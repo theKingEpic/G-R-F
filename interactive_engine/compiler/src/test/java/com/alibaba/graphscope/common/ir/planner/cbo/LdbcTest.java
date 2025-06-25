@@ -38,7 +38,7 @@ public class LdbcTest {
 
     @Test
     public void ldbc1_test() {
-        GraphBuilder builder = Utils.mockGraphBuilder(optimizer, irMeta);
+        GraphBuilder builder = Utils.mockGraphBuilder(optimizer, irMeta);//构建图查询的代数结构
         RelNode before =
                 com.alibaba.graphscope.cypher.antlr4.Utils.eval(
                                 "MATCH (p: PERSON{id: $personId}) -[k:KNOWS*1..4]-(f: PERSON"

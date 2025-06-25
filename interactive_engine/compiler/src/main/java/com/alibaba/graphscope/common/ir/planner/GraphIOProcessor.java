@@ -76,13 +76,82 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+/**
+ * GraphScope 图查询输入输出处理器，负责图查询计划的转换和优化。
+ *
+ * <p>该处理器是 GraphScope 查询优化管道中的核心组件，主要功能包括：
+ * <ul>
+ *   <li>将 {@code Match} 模式转换为 {@code Pattern} 结构</li>
+ *   <li>将 {@code Intersect} 操作转换为 {@code Expand} 或 {@code MultiJoin}</li>
+ *   <li>处理图模式匹配的输入和输出转换</li>
+ *   <li>管理图查询中的数据键值映射和别名推断</li>
+ * </ul>
+ *
+ * <p>处理器支持以下图查询操作的转换：
+ * <ul>
+ *   <li>{@link GraphLogicalSingleMatch} - 单模式匹配转换</li>
+ *   <li>{@link GraphLogicalMultiMatch} - 多模式匹配转换</li>
+ *   <li>{@link GraphLogicalExpand} - 图扩展操作处理</li>
+ *   <li>{@link GraphLogicalPathExpand} - 路径扩展操作处理</li>
+ *   <li>{@link GraphLogicalGetV} - 顶点获取操作处理</li>
+ *   <li>{@link GraphLogicalSource} - 图数据源处理</li>
+ * </ul>
+ *
+ * <p>该处理器在查询优化过程中的作用：
+ * <ol>
+ *   <li><strong>输入处理</strong>：通过 {@code processInput} 方法将逻辑查询计划转换为模式结构</li>
+ *   <li><strong>模式构建</strong>：使用 {@code InputConvertor} 构建图模式，包括顶点和边的关系</li>
+ *   <li><strong>输出处理</strong>：通过 {@code processOutput} 方法将优化后的模式转换回执行计划</li>
+ *   <li><strong>类型推断</strong>：处理图元素的类型推断和标签配置</li>
+ * </ol>
+ *
+ * <p>处理器维护以下关键数据结构：
+ * <ul>
+ *   <li>{@code graphDetails} - 存储图元素的详细信息映射</li>
+ *   <li>{@code DataKey/DataValue} - 用于标识和存储图元素数据</li>
+ *   <li>{@code Pattern} - 表示图查询模式的内部结构</li>
+ * </ul>
+ *
+ * <p>使用示例：
+ * <pre>{@code
+ * GraphBuilder builder = ...;
+ * IrMeta irMeta = ...;
+ * GraphIOProcessor processor = new GraphIOProcessor(builder, irMeta);
+ *
+ * // 处理输入查询计划
+ * RelNode processedInput = processor.processInput(inputPlan);
+ *
+ * // 处理输出查询计划
+ * RelNode processedOutput = processor.processOutput(outputPlan);
+ * }</pre>
+ *
+ * @author GraphScope Team
+ * @since 1.0
+ * @see GraphBuilder
+ * @see IrMeta
+ * @see Pattern
+ * @see GraphRelOptimizer
+ */
 public class GraphIOProcessor {
+    /** 图构建器，用于创建和操作图查询计划 */
     private final GraphBuilder builder;
+
+    /** IR 元数据，包含图模式和统计信息 */
     private final IrMeta irMeta;
+
+    /** 关系元数据查询接口 */
     private final RelMetadataQuery mq;
+
+    /** 图元素详细信息的映射表 */
     private final Map<DataKey, DataValue> graphDetails;
 
+    /**
+     * 构造一个新的 GraphIOProcessor 实例。
+     *
+     * @param builder 图构建器，不能为 null
+     * @param irMeta IR 元数据，不能为 null
+     * @throws NullPointerException 如果任一参数为 null
+     */
     public GraphIOProcessor(GraphBuilder builder, IrMeta irMeta) {
         this.builder = Objects.requireNonNull(builder);
         this.irMeta = Objects.requireNonNull(irMeta);
@@ -91,14 +160,32 @@ public class GraphIOProcessor {
     }
 
     /**
-     * convert {@code Match} to {@code Pattern}
-     * @param input
-     * @return
+     * 处理单个输入关系节点，将 {@code Match} 转换为 {@code Pattern}。
+     *
+     * <p>此方法是 {@link #processInput(List)} 的便捷重载版本。
+     *
+     * @param input 要处理的输入关系节点
+     * @return 转换后的关系节点
+     * @see #processInput(List)
      */
     public RelNode processInput(RelNode input) {
         return processInput(ImmutableList.of(input));
     }
 
+    /**
+     * 处理多个输入关系节点，将 {@code Match} 模式转换为 {@code Pattern} 结构。
+     *
+     * <p>该方法执行以下步骤：
+     * <ol>
+     *   <li>创建 {@code InputConvertor} 访问者</li>
+     *   <li>遍历所有输入节点进行转换</li>
+     *   <li>构建最终的图模式结构</li>
+     *   <li>更新图详细信息映射</li>
+     * </ol>
+     *
+     * @param inputs 要处理的输入关系节点列表
+     * @return 转换后的关系节点
+     */
     public RelNode processInput(List<RelNode> inputs) {
         InputConvertor convertor = new InputConvertor();
         RelNode processed = null;
@@ -110,18 +197,37 @@ public class GraphIOProcessor {
     }
 
     /**
-     * convert {@code Intersect} to {@code Expand} or {@code MultiJoin}
-     * @param output
-     * @return
+     * 处理输出关系节点，将 {@code Intersect} 转换为 {@code Expand} 或 {@code MultiJoin}。
+     *
+     * <p>该方法使用 {@code OutputConvertor} 访问者模式来转换查询计划，
+     * 将优化后的模式结构转换回可执行的关系操作。
+     *
+     * @param output 要处理的输出关系节点
+     * @return 转换后的关系节点
      */
     public RelNode processOutput(RelNode output) {
         return output.accept(new OutputConvertor());
     }
-
+    /**
+     * 获取关联的图构建器实例。
+     *
+     * @return 图构建器实例
+     */
     public GraphBuilder getBuilder() {
         return builder;
     }
-
+    /**
+     * 输入转换器，负责将逻辑查询计划转换为图模式结构。
+     *
+     * <p>该内部类继承自 {@code GraphShuttle}，实现了访问者模式来遍历
+     * 和转换不同类型的图关系节点。主要功能包括：
+     * <ul>
+     *   <li>处理 {@code GraphLogicalSingleMatch} 和 {@code GraphLogicalMultiMatch}</li>
+     *   <li>构建 {@code Pattern} 对象表示图查询模式</li>
+     *   <li>管理别名到顶点的映射关系</li>
+     *   <li>处理可选匹配和模式重排序</li>
+     * </ul>
+     */
     private class InputConvertor extends GraphShuttle {
         private final Map<String, PatternVertex> aliasNameToVertex;
         private final AtomicInteger idGenerator;
@@ -499,7 +605,17 @@ public class GraphIOProcessor {
             }
         }
     }
-
+    /**
+     * 输出转换器，负责将优化后的模式结构转换回可执行的关系操作。
+     *
+     * <p>该内部类处理以下转换：
+     * <ul>
+     *   <li>将 {@code GraphPattern} 转换为具体的图操作序列</li>
+     *   <li>处理路径扩展的类型推断和优化</li>
+     *   <li>管理连接操作的分解和重组</li>
+     *   <li>处理可选匹配的特殊逻辑</li>
+     * </ul>
+     */
     private class OutputConvertor extends GraphShuttle {
         private Map<DataKey, DataValue> details = Maps.newHashMap(graphDetails);
 

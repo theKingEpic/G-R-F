@@ -46,7 +46,22 @@
             <pattern>[%d{ISO8601}][%p][%t][%c:%L] %m%n</pattern>
         </encoder>
     </appender>
+    <appender name="CardinalityFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log_dir}/Cardinality.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log_dir}/Cardinality.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>10</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%d{ISO8601}][%p][%t][%c] %m%n</pattern>
+        </encoder>
+    </appender>
 
+    <logger name="CardinalityEstimation" level="INFO" additivity="false">
+        <appender-ref ref="CardinalityFile"/>
+    </logger>
     <Logger name="PerfMetricLog" level="INFO" additivity="false">
         <appender-ref ref="PerfMetricLog"/>
     </Logger>
