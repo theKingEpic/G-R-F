@@ -62,6 +62,10 @@ public class Config<T> {
         return new Config<>(key, String.valueOf(defaultVal), (s) -> Boolean.parseBoolean(s));
     }
 
+    public static Config<Double> doubleConfig(String key, double defaultVal) {
+        return new Config<>(key, String.valueOf(defaultVal), (s) -> Double.parseDouble(s));
+    }
+
     public String getKey() {
         return this.key;
     }

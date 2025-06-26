@@ -48,23 +48,46 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.alibaba.graphscope.common.config.PlannerConfig;
+import com.alibaba.graphscope.common.ir.meta.glogue.CardinalityEstimator;
+import com.alibaba.graphscope.common.ir.meta.glogue.CardinalityEstimatorFactory;
+import com.alibaba.graphscope.common.ir.rel.GraphPattern;
+import com.alibaba.graphscope.common.ir.rel.metadata.glogue.GlogueQuery;
+import com.alibaba.graphscope.common.ir.rel.metadata.glogue.pattern.Pattern;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.metadata.BuiltInMetadata;
+import org.apache.calcite.rel.metadata.RelMdRowCount;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
 public class GraphRowCountHandler implements BuiltInMetadata.RowCount.Handler {
-    private final PrimitiveCountEstimator countEstimator;
+    //private final PrimitiveCountEstimator countEstimator;
+    private final CardinalityEstimator cardinalityEstimator;
     private final RelOptPlanner optPlanner;
     private final RelMdRowCount mdRowCount;
 
-    public GraphRowCountHandler(RelOptPlanner optPlanner, GlogueQuery glogueQuery) {
+    /*public GraphRowCountHandler(RelOptPlanner optPlanner, GlogueQuery glogueQuery) {
         this.optPlanner = optPlanner;
         this.countEstimator = new PrimitiveCountEstimator(glogueQuery);
         this.mdRowCount = new RelMdRowCount();
+    }*/
+
+    public GraphRowCountHandler(RelOptPlanner optPlanner, GlogueQuery glogueQuery, PlannerConfig config) {
+        this.optPlanner = optPlanner;
+        this.mdRowCount = new RelMdRowCount();
+
+        // 使用工厂模式创建估计器
+        String estimatorType = config.getCardinalityEstimator();
+        this.cardinalityEstimator = CardinalityEstimatorFactory.createEstimator(
+                estimatorType, glogueQuery, config);
     }
 
     @Override
     public Double getRowCount(RelNode node, RelMetadataQuery mq) {
         if (node instanceof GraphPattern) {
             Pattern pattern = ((GraphPattern) node).getPattern();
-            Double countEstimate = countEstimator.estimate(pattern);
+            Double countEstimate = cardinalityEstimator.estimate(pattern);
+
             if (countEstimate != null) {
                 return countEstimate;
             }
@@ -115,12 +138,12 @@ public class GraphRowCountHandler implements BuiltInMetadata.RowCount.Handler {
             }
             double totalRowCount = 1.0d;
             for (PatternEdge edge : pattern.getEdgeSet()) {
-                totalRowCount *= countEstimator.estimate(edge);
+                totalRowCount *= cardinalityEstimator.estimate(edge);
             }
             for (PatternVertex vertex : pattern.getVertexSet()) {
                 int degree = pattern.getEdgesOf(vertex).size();
                 if (degree > 0) {
-                    totalRowCount /= Math.pow(countEstimator.estimate(vertex), degree - 1);
+                    totalRowCount /= Math.pow(cardinalityEstimator.estimate(vertex), degree - 1);
                 }
             }
             return totalRowCount;
@@ -215,7 +238,7 @@ public class GraphRowCountHandler implements BuiltInMetadata.RowCount.Handler {
             RelMetadataQuery mq) {
         double count = getRowCount(p1, mq) * getRowCount(p2, mq);
         for (PatternVertex vertex : jointVertices) {
-            count /= countEstimator.estimate(vertex);
+            count /= cardinalityEstimator.estimate(vertex);
         }
         return count;
     }

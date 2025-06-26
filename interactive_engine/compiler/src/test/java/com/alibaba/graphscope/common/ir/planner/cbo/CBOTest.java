@@ -7,6 +7,7 @@ import com.alibaba.graphscope.common.ir.planner.GraphIOProcessor;
 import com.alibaba.graphscope.common.ir.planner.GraphRelOptimizer;
 import com.alibaba.graphscope.common.ir.tools.GraphBuilder;
 import com.google.common.collect.ImmutableMap;
+import com.alibaba.graphscope.common.config.PlannerConfig;
 
 import org.apache.calcite.rel.RelNode;
 import org.junit.Assert;
@@ -27,6 +28,8 @@ public class CBOTest {
                                 "true",
                                 "graph.planner.opt",
                                 "CBO",
+                                "graph.planner.pattern.cardinality.estimator", // 新增配置项
+                                "FIXED",                                     // 设置为固定值估计器
                                 "graph.planner.rules",
                                 "FilterIntoJoinRule, FilterMatchRule, ExtendIntersectRule,"
                                         + " ExpandGetVFusionRule"));
@@ -46,7 +49,7 @@ public class CBOTest {
                                 "Match (message:COMMENT|POST)-[:HASCREATOR]->(person:PERSON), \n"
                                         + "      (message:COMMENT|POST)-[:HASTAG]->(tag:TAG), \n"
                                         + "      (person:PERSON)-[:HASINTEREST]->(tag:TAG)\n"
-                                        + "Return count(person);",
+                                        + "Return COUNT(person);",
                                 builder)
                         .build();
         RelNode after = optimizer.optimize(before, new GraphIOProcessor(builder, irMeta));
@@ -71,6 +74,25 @@ public class CBOTest {
                     + "  GraphLogicalSource(tableConfig=[{isAll=false, tables=[PERSON]}],"
                     + " alias=[person], opt=[VERTEX])",
                 com.alibaba.graphscope.common.ir.tools.Utils.toString(after).trim());
+    }
+
+    @Test
+    public void Q1_Q_ERROR_test() {
+        // 验证配置是否正确设置
+        Assert.assertEquals(
+                PlannerConfig.PatternCardinalityEstimator.FIXED,
+                optimizer.getConfig().getPatternCardinalityEstimator());
+
+        GraphBuilder builder = Utils.mockGraphBuilder(optimizer, irMeta);
+        RelNode before =
+                com.alibaba.graphscope.cypher.antlr4.Utils.eval(
+                                "Match (message:COMMENT|POST)-[:HASCREATOR]->(person:PERSON), \n"
+                                        + "      (message:COMMENT|POST)-[:HASTAG]->(tag:TAG), \n"
+                                        + "      (person:PERSON)-[:HASINTEREST]->(tag:TAG)\n"
+                                        + "Return person;",
+                                builder)
+                        .build();
+        RelNode after = optimizer.optimize(before, new GraphIOProcessor(builder, irMeta));
     }
 
     @Test

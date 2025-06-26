@@ -45,7 +45,8 @@ public class GraphMetadataHandlerProvider implements MetadataHandlerProvider {
     @Override
     public MetadataHandler handler(Class handlerClass) {
         if (handlerClass.equals(BuiltInMetadata.RowCount.Handler.class)) {
-            return new GraphRowCountHandler(this.optPlanner, this.glogueQuery);
+            return new GraphRowCountHandler(this.optPlanner, this.glogueQuery, this.plannerConfig);
+            // return new GraphRowCountHandler(this.optPlanner, this.glogueQuery);
         } else if (handlerClass.equals(ExternalMetaData.GlogueEdges.Handler.class)) {
             return new GraphGlogueEdgesHandler(this.glogueQuery);
         } else if (handlerClass.equals(BuiltInMetadata.NonCumulativeCost.Handler.class)) {

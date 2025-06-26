@@ -42,6 +42,49 @@ public class PlannerConfig {
             Config.stringConfig(
                     "graph.planner.trim.class.names",
                     "GraphLogicalExpand, GraphLogicalSource, GraphLogicalGetV");
+    public static final Config<String> GRAPH_PLANNER_PATTERN_CARDINALITY_ESTIMATOR =
+            Config.stringConfig("graph.planner.pattern.cardinality.estimator", "GLOGUE");
+
+    public enum PatternCardinalityEstimator {
+        GLOGUE,  // 原有的Glogue基数估计
+        FIXED    // 新的固定值基数估计
+    }
+
+    public PatternCardinalityEstimator getPatternCardinalityEstimator() {
+        return PatternCardinalityEstimator.valueOf(GRAPH_PLANNER_PATTERN_CARDINALITY_ESTIMATOR.get(configs));
+    }
+
+    /**
+     * 基数估计器类型配置
+     * 用于指定使用哪种基数估计算法
+     * 可选值: "GLOGUE"(默认), "FIXED", "SAMPLING", "MACHINE_LEARNING"
+     */
+    public static final Config<String> GRAPH_PLANNER_CARDINALITY_ESTIMATOR =
+            Config.stringConfig("graph.planner.cardinality.estimator", "GLOGUE");
+
+    /**
+     * 固定基数估计器的返回值配置
+     * 当使用FIXED类型的基数估计器时，所有查询都返回此固定值
+     * 默认值: 99.0，主要用于测试和实验
+     */
+    public static final Config<Double> GRAPH_PLANNER_FIXED_CARDINALITY_VALUE =
+            Config.doubleConfig("graph.planner.fixed.cardinality.value", 99.0);
+
+    /**
+     * 采样基数估计器的基础基数值配置
+     * 当使用SAMPLING类型的基数估计器时，作为估计的基准值
+     * 默认值: 100.0，实际估计值会在此基础上根据模式复杂度调整
+     */
+    public static final Config<Double> GRAPH_PLANNER_SAMPLING_BASE_CARDINALITY =
+            Config.doubleConfig("graph.planner.sampling.base.cardinality", 100.0);
+
+    /**
+     * 采样基数估计器的方差配置
+     * 控制采样估计的随机性程度，值越大随机波动越大
+     * 默认值: 0.1，用于模拟真实环境中基数估计的不确定性
+     */
+    public static final Config<Double> GRAPH_PLANNER_SAMPLING_VARIANCE =
+            Config.doubleConfig("graph.planner.sampling.variance", 0.1);
 
     private final Configs configs;
     private final List<String> rules;
@@ -117,7 +160,22 @@ public class PlannerConfig {
     public int getPlannerGroupClearIntervalMinutes() {
         return GRAPH_PLANNER_GROUP_CLEAR_INTERVAL_MINUTES.get(configs);
     }
+    // 添加getter方法
+    public String getCardinalityEstimator() {
+        return GRAPH_PLANNER_CARDINALITY_ESTIMATOR.get(configs);
+    }
 
+    public double getFixedCardinalityValue() {
+        return GRAPH_PLANNER_FIXED_CARDINALITY_VALUE.get(configs);
+    }
+
+    public double getSamplingBaseCardinality() {
+        return GRAPH_PLANNER_SAMPLING_BASE_CARDINALITY.get(configs);
+    }
+
+    public double getSamplingVariance() {
+        return GRAPH_PLANNER_SAMPLING_VARIANCE.get(configs);
+    }
     @Override
     public String toString() {
         return "PlannerConfig{"
